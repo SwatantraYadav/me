@@ -1,0 +1,120 @@
+Swatantra Yadav
+Contact
+swatantra_y@hotmail.com
+www.linkedin.com/in/swatantra
+yadav-5362681 (LinkedIn)
+Top Skills
+NumPy
+Python (Programming Language)
+.NET Framework
+Languages
+English
+Certifications
+CIS534 Decision Trees and Model
+Selection
+MCPS: Microsoft Certified
+Professional
+CIS 533 - Learning with Linear
+Classifiers
+CIS537: Deep Learning and Neural
+Networks
+Google IT Support Certificate
+Senior Software Engineer @ Microsoft | Architecting Microservices
+for Security
+Redmond, Washington, United States
+Summary
+I specialize in architecting and implementing microservices that
+handle tens of billions of calls daily. My work focuses on precision,
+performance, and security within high-scale environments, backed
+by certifications including several courses in ML from Cornell
+University.  
+At Microsoft, I designed a service that saves $5M+ annually and led
+the development of scalable infrastructures across 21 Azure regions.
+With expertise in microservices, software infrastructure, and security,
+I am dedicated to delivering impactful and innovative solutions that
+meet complex challenges.
+Experience
+Microsoft
+Senior Software Engineer
+May 2020 - Present (5 years 10 months)
+United States
+At Microsoft, I’ve spent the last five years architecting and designing
+microservices that protect millions of customers and handle tens of billions
+of calls every day. I thrive in high-scale environments where precision,
+performance, and security are non-negotiable.
+Highlights:-  Cost Savings: Designed and built a service that saves $5M annually—
+impacting both infrastructure efficiency and operational cost.-  Global Deployment: Architected the infrastructure deployment module that
+enabled our organization to scale services across 21 Azure regions in under a
+year.-  Security & Scale: Led backend development for systems that play a critical
+role in safeguarding customer data at massive scale.
+ Page 1 of 3
+  
+SkyKick
+Software Development Engineer
+December 2015 - April 2020 (4 years 5 months)
+Seattle, Washington, United States
+• Designed and developed cloud-based services for seamless mail migration to
+Microsoft Office 365.  
+• Researched and integrated IoT features to enhance product capabilities.  
+• Investigated and resolved complex issues related to COM-based Message
+API during Outlook profile migration.  
+• Utilized technologies such as Azure, C#, and SQL Server to deliver robust
+solutions.
+Translational Software
+Software Development Engineer
+October 2014 - August 2015 (11 months)
+Mercer Island
+• Developed end-to-end cloud-based SaaS solutions that transformed
+pharmacogenetic test results into actionable clinical reports.
+Microsoft
+8 years 6 months
+Software Development Engineer in Test-2 (Service Fabric team)
+September 2012 - September 2014 (2 years 1 month)
+Redmond, Washington, US
+• Contributed to the core team developing the Service Fabric product, a
+competitor to Kubernetes.  
+• Built a fully automated test framework that bootstrapped Service Fabric
+across 500+ VMs.  
+• Conducted rigorous testing, collecting metrics, logs, and process dumps to
+identify actionable bugs.
+Development Lead
+April 2006 - August 2012 (6 years 5 months)
+• Led a team of developers at Microsoft, overseeing multiple projects and
+ensuring timely quarterly releases.  
+• Managed people through hiring, technical design, and code reviews, fostering
+a collaborative environment.  
+• Developed strong technical skills while enhancing team productivity and
+project delivery efficiency.
+ Page 2 of 3
+  
+Computer Sciences Corporation
+Senior Software Engineer
+April 2005 - March 2006 (1 year)
+Java based development for Sun Microsystems.
+Oracle
+Senior Member Technical Staff
+March 2004 - March 2005 (1 year 1 month)
+Banglore, India
+As a part of Oracle BPEL Process Manager product development team
+designed and implemented a highly appreciated UI wizard that detects file
+formats and suggests appropriate converted XML formats and also generates
+XSD.
+Camilion Solutions, An SAP Company
+Software Developer
+February 2001 - February 2004 (3 years 1 month)
+Worked for 3 years on development of a customizable workflow software
+application for Property and Causality Insurance business. Primary
+responsibilities were coding using Java / J2EE (JSP, EJB, JMS, Weblogic).
+Beta Systems AG, Calgary, Canada
+Intermediate Software Developer
+August 1999 - January 2001 (1 year 6 months)
+Using Visual C++ developed Namespace Extensions and Shell Extensions
+to extend Windows Explorer. Extensively used Win 32 API, COM interfaces.
+Database information was displayed in Windows Explorer.
+Education
+Cornell University
+Certficate Program, Machine learning · (July 2024)
+University of Calgary
+MS, Computer Integrated Manufacturing · (1996 - 1998)
+Motilal Nehru National Institute Of Technology
+B.Engg., Mechanical Engineering · (1992 - 1996)
