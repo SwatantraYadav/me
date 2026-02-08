@@ -1,6 +1,16 @@
+import Image from "next/image";
+
 export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-[80vh] p-10 text-center">
+      <Image
+        src="/images/profile.jpg"
+        alt="Swatantra Yadav"
+        width={150}
+        height={150}
+        className="rounded-full mb-6"
+        priority
+      />
       <h1 className="text-5xl font-bold">Swatantra Yadav</h1>
       <p className="mt-2 text-xl text-foreground/70">Senior Software Engineer @ Microsoft</p>
       <p className="mt-6 max-w-2xl text-lg text-foreground/60">

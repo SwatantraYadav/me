@@ -33,6 +33,11 @@ export default function Navbar() {
           </Link>
         </li>
         <li>
+          <Link href="/blog" className="hover:text-foreground/70 transition-colors">
+            Blog
+          </Link>
+        </li>
+        <li>
           <Link href="/contact" className="hover:text-foreground/70 transition-colors">
             Contact
           </Link>
