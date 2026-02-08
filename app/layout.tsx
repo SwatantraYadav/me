@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Swatantra Yadav - Software Engineer Portfolio",
   description: "Personal portfolio showcasing projects, experience, and achievements of Swatantra Yadav, a Senior Software Engineer at Microsoft.",
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
