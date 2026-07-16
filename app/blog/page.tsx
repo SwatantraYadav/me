@@ -3,8 +3,9 @@ const posts = [
     title: "Building Scalable Microservices",
     date: "February 5, 2026",
     excerpt:
-      "Lessons learned from designing and deploying microservices that handle billions of requests daily.",
-    tags: ["Architecture", "Microservices", "Azure"],
+      "How a stateless, partition-aware ingestion service scales reliably using Event Hub consumer groups, entity channels, and bounded asynchronous batching.",
+    tags: ["Architecture", "Distributed Systems", "Event Hubs"],
+    href: "/telemetry-uploader.html",
   },
   {
     title: "Infrastructure as Code Best Practices",
@@ -37,7 +38,15 @@ export default function BlogPage() {
             className="p-6 border border-foreground/10 rounded-lg hover:border-foreground/30 transition-colors cursor-pointer"
           >
             <time className="text-sm text-foreground/50">{post.date}</time>
-            <h2 className="mt-2 text-xl font-semibold">{post.title}</h2>
+            <h2 className="mt-2 text-xl font-semibold">
+              {post.href ? (
+                <a href={post.href} className="hover:underline">
+                  {post.title}
+                </a>
+              ) : (
+                post.title
+              )}
+            </h2>
             <p className="mt-2 text-foreground/70">{post.excerpt}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {post.tags.map((tag) => (

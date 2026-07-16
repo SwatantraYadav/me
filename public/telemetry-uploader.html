@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Telemetry Uploader: Scaling a Telemetry Pipeline</title>
+  <meta name="description" content="A sanitized engineering blog about scaling a telemetry ingestion pipeline through latency, backlog, batching, and checkpointing pressure." />
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.65;
+    }
+
+    a { color: var(--cp-link); }
+
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .hero {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 40px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 6px;
+      background: var(--cp-accent);
+    }
+
+    .eyebrow {
+      color: var(--cp-accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      margin-bottom: 12px;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin: 0 0 16px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: -0.04em;
+      max-width: 900px;
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid var(--cp-border);
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin-top: 24px;
+      color: var(--cp-text);
+    }
+
+    p { margin: 0 0 18px; }
+
+    .dek {
+      color: var(--cp-text-muted);
+      font-size: 1.15rem;
+      max-width: 860px;
+      margin-bottom: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--cp-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: var(--cp-text-muted);
+      background: var(--cp-surface-soft);
+      font-size: 0.9rem;
+    }
+
+    .notice {
+      border: 1px solid var(--cp-border);
+      border-left: 6px solid var(--cp-warning);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      padding: 16px 18px;
+      margin: 0 0 24px;
+      color: var(--cp-text-muted);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    article {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 36px;
+    }
+
+    aside {
+      position: sticky;
+      top: 20px;
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 20px;
+    }
+
+    aside h2 {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+      font-size: 1rem;
+    }
+
+    .toc {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .toc li { margin: 0 0 8px; }
+
+    .toc a {
+      text-decoration: none;
+      color: var(--cp-text-muted);
+      font-size: 0.92rem;
+    }
+
+    .toc a:hover { color: var(--cp-accent); }
+
+    ul, ol {
+      margin: 0 0 20px 22px;
+      padding: 0;
+    }
+
+    li { margin-bottom: 8px; }
+
+    .callout {
+      background: var(--cp-accent-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+
+    .callout strong { color: var(--cp-accent); }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface-soft);
+      padding: 18px;
+    }
+
+    .card h3 { margin-top: 0; }
+
+    .flow-box {
+      margin: 20px 0 8px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--cp-border);
+      background:
+        linear-gradient(135deg, rgba(177, 31, 75, 0.08), rgba(0, 120, 212, 0.08)),
+        var(--cp-surface);
+    }
+
+    .flow-title {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--cp-text-muted);
+      font-weight: 700;
+    }
+
+    .flow-diagram {
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-step {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.96rem;
+      line-height: 1.35;
+      color: var(--cp-text);
+      max-width: 240px;
+      font-weight: 600;
+    }
+
+    .step-source { background: #ffe8ef; border-color: #f6b5c8; }
+    .step-batch { background: #e9f7e8; border-color: #9ad39a; }
+    .step-flush { background: #e5f3ff; border-color: #9dc9f5; }
+    .step-checkpoint { background: #efe8ff; border-color: #c4b0f8; }
+
+    .flow-parallel {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed var(--cp-border-strong);
+      border-radius: 12px;
+      background: #fff1dc;
+      min-width: 260px;
+    }
+
+    .channel-box {
+      border: 1px solid #f5c87b;
+      border-radius: 10px;
+      background: #fff7ea;
+      color: var(--cp-text);
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 8px 6px;
+    }
+
+    .flow-arrow {
+      color: var(--cp-accent);
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    html[data-theme="dark"] .flow-box {
+      background:
+        linear-gradient(135deg, rgba(253, 142, 161, 0.2), rgba(77, 166, 255, 0.2)),
+        var(--cp-surface);
+    }
+
+    html[data-theme="dark"] .step-source { background: #4e2f39; border-color: #8f5968; }
+    html[data-theme="dark"] .step-batch { background: #284430; border-color: #4e8b5b; }
+    html[data-theme="dark"] .step-flush { background: #243c52; border-color: #4b7ea8; }
+    html[data-theme="dark"] .step-checkpoint { background: #3d2d57; border-color: #6f57a0; }
+    html[data-theme="dark"] .flow-parallel { background: #4a3825; border-color: #8e6a3c; }
+    html[data-theme="dark"] .channel-box { background: #5a452d; border-color: #a17a46; }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .metric {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface-soft);
+      padding: 16px;
+    }
+
+    .metric .label {
+      display: block;
+      color: var(--cp-text-muted);
+      font-size: 0.84rem;
+      margin-bottom: 4px;
+    }
+
+    .metric .value {
+      display: block;
+      color: var(--cp-accent);
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", Courier, monospace;
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 2px 6px;
+      color: var(--cp-text);
+    }
+
+    footer {
+      color: var(--cp-text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 28px 0 0;
+    }
+
+    @media (max-width: 900px) {
+      .content { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .comparison, .metric-strip { grid-template-columns: 1fr; }
+      .hero, article { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Engineering blog</div>
+      <h1>Telemetry Uploader: Scaling a Telemetry Pipeline Through Latency, Backlog, and Checkpointing Pressure</h1>
+      <p class="dek">A publish-safe version of the engineering story behind scaling a telemetry ingestion service from a correctness-first pipeline into a higher-throughput, more resilient distributed system.</p>
+      <div class="meta">
+        <span class="pill">Telemetry ingestion</span>
+        <span class="pill">Event Hubs</span>
+        <span class="pill">Cosmos-scale writes</span>
+        <span class="pill">Checkpointing</span>
+      </div>
+    </section>
+
+    <div class="notice">
+      <strong>Publication note:</strong> This version is sanitized for website publishing. It intentionally omits internal URLs, incident identifiers, exact deployment details, and sensitive operational data.
+    </div>
+
+    <div class="content">
+      <article>
+        <p>Telemetry Uploader was built to move telemetry from front-end Event Hubs into a shared analytical storage backend, where research and analysis teams can consume it reliably. The service reads telemetry events, loads referenced blob payloads, converts them into telemetry envelopes, and writes them in a durable protobuf format.</p>
+
+        <p>At small or moderate scale, this is mostly an ingestion problem. At production scale, it becomes a distributed systems problem. The service has to deal with regional latency, Event Hub partition ownership, checkpointing semantics, write limits, batching efficiency, memory pressure, and large differences in telemetry volume across regions.</p>
+
+        <div class="callout">
+          <strong>My perspective:</strong> At different scales, different models dominate: quantum at very small scales, relativity at very large or high-gravity scales, and classical mechanics in everyday ranges. Likewise, at massive scale, software design principles must evolve.
+        </div>
+
+        <h2 id="what-it-does">What Telemetry Uploader does</h2>
+        <p>Telemetry producers write source payloads into object storage and send blob references through Event Hub. Telemetry Uploader consumes those messages and performs the heavy lifting:</p>
+        <ol>
+          <li>Read a batch of telemetry events from Event Hub.</li>
+          <li>Read the associated blob payloads.</li>
+          <li>Convert payloads into telemetry envelope objects.</li>
+          <li>Route entities into in-memory channels by entity type, partition, and time.</li>
+          <li>Packetize data into storage-compatible protobuf payloads.</li>
+          <li>Flush the packets to the analytical storage backend.</li>
+          <li>Report processing, retry, failure, latency, checkpoint, and throughput metrics.</li>
+        </ol>
+
+        <h2 id="architecture">Architecture overview</h2>
+        <p>Telemetry Uploader runs as a stateless service and relies on an Event Hub telemetry library for reads, checkpointing, retry handling, cooldown behavior, and error accounting. The service owns producer logic, while a shared entity library owns packet construction and write abstractions.</p>
+        <p>The service is deployed on Kubernetes across multiple Azure regions to improve resiliency, regional failover options, and proximity to high-volume telemetry sources.</p>
+        <p>A key design choice is partition-aware processing. Event Hub partitions define the natural concurrency model. The service scales horizontally by assigning workers to partitions through a consumer group.</p>
+
+        <div class="callout">
+          <strong>Core abstraction:</strong> entity channels buffer data by entity type, Event Hub partition, and time window. They reduce write-call volume by accumulating data before flushing packets.
+        </div>
+
+        <h2 id="write-limit">The write-size constraint</h2>
+        <p>The pipeline writes through an SDK path that constrains individual writes to a bounded packet size. That limit shapes the implementation. The service cannot append arbitrarily large telemetry batches; it must batch efficiently while preserving protobuf boundaries.</p>
+        <p>Each packet includes a delimiter, signature, payload metadata, integrity hash, and protobuf payload. This structure allows downstream readers to process appended files safely and validate packet integrity.</p>
+
+        <h2 id="latency-checkpointing">When latency exposes checkpointing behavior</h2>
+        <p>One high-latency region exposed an important interaction between slow processing and Event Hub checkpointing. Reads from blob storage and writes to the analytical backend were both slow. That reduced throughput, but it also created cases where workers did not complete checkpointing before partition ownership moved to another worker.</p>
+        <p>When checkpointing does not complete, already uploaded data can be reprocessed. From Event Hub's perspective, the partition position has not advanced. A new owner can pick up the same events again, causing duplicate work and blocking forward progress.</p>
+
+        <h3>Observed symptoms</h3>
+        <ul>
+          <li>No checkpointing for some partitions.</li>
+          <li>Partition ownership transferring before processing and checkpointing completed.</li>
+          <li>Successfully uploaded data being reprocessed.</li>
+          <li>Processing becoming blocked under sustained latency pressure.</li>
+        </ul>
+
+        <h2 id="original-design">Original correctness-first design</h2>
+        <p>The original design prioritized no data loss. Batches were processed before messages were marked complete, and checkpointing advanced only after the service had enough confidence that data had been written safely.</p>
+        <p>This design avoids checkpointing before durable writes and reduces checkpoint frequency. But under high latency, the downside becomes visible. If a batch takes too long, partition ownership can move before checkpointing finishes. The system then does not reflect work already completed.</p>
+
+        <h2 id="per-entity-writes">The per-entity write problem</h2>
+        <p>A second scaling issue was write granularity. The intended design was to batch data into larger packets, similar to prior forwarding systems. But the implementation became too conservative: to guarantee no data loss, it could flush data per entity, even when an entity was very small.</p>
+        <p>At large scale, that does not work. Billions of entities multiplied by one write per entity creates an enormous number of write calls. This increases latency, reduces throughput, and makes the system more sensitive to regional network conditions.</p>
+
+        <div class="comparison">
+          <section class="card">
+            <h3>Current behavior to avoid at scale</h3>
+            <ul>
+              <li>Read events from Event Hub.</li>
+              <li>Push each event to an entity channel.</li>
+              <li>Immediately write small payloads.</li>
+              <li>Checkpoint after processing.</li>
+              <li>Repeat with high write-call volume.</li>
+            </ul>
+          </section>
+          <section class="card">
+            <h3>Scalable direction</h3>
+            <ul>
+              <li>Read events from Event Hub.</li>
+              <li>Push events into in-memory channels.</li>
+              <li>Batch until a bounded packet threshold.</li>
+              <li>Flush asynchronously.</li>
+              <li>Advance checkpoints safely and progressively.</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="flow-box" aria-label="Scalable direction flow diagram">
+          <p class="flow-title">Scalable Direction Diagram</p>
+          <div class="flow-diagram">
+            <div class="flow-step step-source">Read events from Event Hub</div>
+            <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+            <div class="flow-parallel" aria-label="Parallel in-memory channels">
+              <div class="channel-box">Channel A</div>
+              <div class="channel-box">Channel B</div>
+              <div class="channel-box">Channel C</div>
+            </div>
+            <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+            <div class="flow-step step-batch">Batch to bounded packet threshold</div>
+            <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+            <div class="flow-step step-flush">Flush asynchronously</div>
+            <span class="flow-arrow" aria-hidden="true">&rarr;</span>
+            <div class="flow-step step-checkpoint">Advance checkpoints safely and progressively</div>
+          </div>
+        </div>
+
+        <h2 id="batching-redesign">Proposed batching redesign</h2>
+        <p>The redesigned approach moves Telemetry Uploader closer to the original bulk-write intent. Instead of flushing tiny payloads immediately, entity channels accumulate data until they approach the packet threshold and then flush asynchronously.</p>
+        <p>This dramatically reduces write-call volume. It also helps the Event Hub processing loop avoid stop-and-wait behavior, allowing the service to continue reading and parsing while writes complete in parallel.</p>
+
+        <h2 id="checkpointing-tradeoff">The checkpointing tradeoff</h2>
+        <p>The redesign introduces a real tradeoff. If the service checkpoints earlier while data is still buffered in memory, a worker crash could lose unflushed data. The exposure can be bounded, but it is not zero.</p>
+        <p>The right answer is not simply choosing safety or speed. The practical design is to batch aggressively for throughput, keep checkpointing semantics honest, add recovery mechanisms for buffered data, and make residual risk visible and bounded.</p>
+
+        <div class="callout">
+          <strong>Mitigation:</strong> write unflushed data to a dead-letter or storage-backed recovery path during shutdown where possible, so the service can preserve buffered data without reverting to synchronous per-entity writes.
+        </div>
+
+        <h2 id="eventhub-constraints">Event Hub checkpointing constraints</h2>
+        <p>Event Hub checkpointing has ordering constraints. A consumer cannot safely checkpoint a later message and then go back to an earlier one. The checkpoint represents a position in the partition stream.</p>
+        <p>That means per-message checkpointing is only safe when all earlier messages in the partition have been processed or intentionally classified as failed. If processing is parallelized, the service needs to know the highest consecutive completed offset before checkpointing.</p>
+
+        <h2 id="throughput-backlog">Healthy services can still fall behind</h2>
+        <p>Another high-volume region showed a related but different scaling problem. The service was healthy: workers were running, processing was active, and errors were not the primary driver. The issue was sustained throughput. Incoming volume exceeded the rate at which data could be written.</p>
+        <p>This distinction matters. A healthy service can still build a backlog if write latency is high, payload sizes grow, or write parallelism is insufficient.</p>
+
+        <h2 id="cross-region">Cross-region processing</h2>
+        <p>A major short-term improvement came from validating cross-region processing. Instead of running workers only in the source region, the team tested running workers from a lower-latency region while continuing to read source-region data.</p>
+        <p>This validated an important hypothesis: the bottleneck was not only Event Hub reads or worker count. The network relationship between the processing region and the storage backend materially affected ingestion throughput.</p>
+
+        <h2 id="parallelism">Increasing write parallelism</h2>
+        <p>The next major improvement is increasing write parallelism by changing output partitioning. The original entity channel model grouped data by entity type, partition, and larger time windows. A more granular model creates more independent output targets and allows the service to spread writes across more files.</p>
+        <p>The tradeoff is more files and more coordination, but for high-volume regions the throughput gain is worth it.</p>
+
+        <h2 id="dominant-entities">Handling dominant entities separately</h2>
+        <p>When one entity type accounts for a large share of traffic, it can dominate buffers, write pressure, and backlog behavior. Treating dominant entities separately gives the service more control over batching, prioritization, and write concurrency.</p>
+        <p>At small scale, uniform entity handling is simpler. At large scale, skew matters.</p>
+
+        <h2 id="observability">Observability and operational safety</h2>
+        <p>Telemetry Uploader exposes operational metrics and logs for cooldown, retry spikes, processing failures, critical errors, checkpoint failures, queue pressure, rate limiting, and memory pressure.</p>
+        <p>The current operating target is <strong>120 terabytes uploaded per day</strong>. The acceptable latency SLA is <strong>a maximum 5-minute delay at the 95th percentile</strong>. Real-time processing remains the north-star goal as the system evolves.</p>
+        <div class="metric-strip">
+          <div class="metric"><span class="label">Latency SLA</span><span class="value">P95 <= 5 min</span></div>
+          <div class="metric"><span class="label">Reliability</span><span class="value">Retries</span></div>
+          <div class="metric"><span class="label">Daily Scale</span><span class="value">120 TB/day</span></div>
+        </div>
+        <p>The most important lesson is that success counts alone are insufficient. Backlog and creation-to-processing latency are critical signals. For telemetry pipelines, processed eventually is not always good enough.</p>
+
+        <h2 id="lessons">Lessons learned</h2>
+        <ul>
+          <li><strong>Healthy services can still fall behind.</strong> Throughput and latency problems may not show up as simple error-rate problems.</li>
+          <li><strong>Latency can expose checkpointing weaknesses.</strong> Slow reads and writes can cause partition ownership transfers before checkpointing completes.</li>
+          <li><strong>Per-entity writes do not scale.</strong> A correctness-first implementation that flushes tiny entities immediately can become the bottleneck.</li>
+          <li><strong>Batching must be deliberate.</strong> Larger packets reduce write calls, but the service must preserve payload boundaries and manage buffered-data risk.</li>
+          <li><strong>Checkpointing must respect partition order.</strong> Parallel processing is useful, but checkpoints must advance only through the highest consecutive completed position.</li>
+          <li><strong>Process stability is non-negotiable.</strong> Long-running ingestion workers must avoid memory leaks, dispose objects efficiently, and continuously monitor memory growth to prevent throughput collapse and restarts.</li>
+          <li><strong>Infrastructure is not the only lever.</strong> Service-level throughput improvements should come first when the pipeline is inefficient.</li>
+          <li><strong>Observability must measure freshness.</strong> Backlog and creation-to-processing latency are critical operational signals.</li>
+        </ul>
+
+        <h2 id="conclusion">Conclusion</h2>
+        <p>Telemetry Uploader began as a telemetry bridge from Event Hubs to a shared analytical backend. At production scale, it became a distributed ingestion system shaped by regional latency, partition ownership, checkpoint semantics, write limits, memory pressure, and telemetry growth.</p>
+        <div class="callout">
+          <strong>Production outcome:</strong> The service has been deployed and is running with <strong>100% uptime</strong> at very low latency. Operationally, it works like a refrigerator: always on, stable, and quietly reliable.
+        </div>
+        <p>The path forward is clear: batch writes closer to the packet limit, increase write parallelism, checkpoint safely but more progressively, recover buffered data through a storage-backed safety mechanism, and place processing closer to the best write path where needed.</p>
+        <p>Telemetry Uploader's evolution is a useful example of production engineering in practice: start with a correct design, observe where real traffic breaks the assumptions, and then reshape the architecture around the bottlenecks that actually matter.</p>
+      </article>
+
+      <aside aria-label="Table of contents">
+        <h2>In this article</h2>
+        <ul class="toc">
+          <li><a href="#what-it-does">What Telemetry Uploader does</a></li>
+          <li><a href="#architecture">Architecture overview</a></li>
+          <li><a href="#write-limit">Write-size constraint</a></li>
+          <li><a href="#latency-checkpointing">Latency and checkpointing</a></li>
+          <li><a href="#per-entity-writes">Per-entity writes</a></li>
+          <li><a href="#batching-redesign">Batching redesign</a></li>
+          <li><a href="#checkpointing-tradeoff">Checkpointing tradeoff</a></li>
+          <li><a href="#parallelism">Write parallelism</a></li>
+          <li><a href="#observability">Observability</a></li>
+          <li><a href="#lessons">Lessons learned</a></li>
+        </ul>
+      </aside>
+    </div>
+
+  </main>
+</body>
+</html>

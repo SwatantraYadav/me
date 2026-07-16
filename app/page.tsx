@@ -36,6 +36,12 @@ export default function Home() {
         >
           View Projects
         </a>
+        <a
+          href="/telemetry-uploader.html"
+          className="px-6 py-3 border border-foreground rounded-lg hover:bg-foreground/10 hover:scale-105 transition-all duration-300"
+        >
+          Read Telemetry Uploader Blog
+        </a>
       </div>
     </main>
   );
