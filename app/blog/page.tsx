@@ -8,6 +8,14 @@ const posts = [
     href: "/telemetry-uploader.html",
   },
   {
+    title: "Building an Android App for a Marketplace",
+    date: "July 16, 2026",
+    excerpt:
+      "A deep dive into creating an agricultural marketplace app (MetaAgro) for farmers in India using Flutter and Firebase.",
+    tags: ["Mobile", "Flutter", "Firebase", "Android"],
+    href: "/marketplace-app.html",
+  },
+  {
     title: "Infrastructure as Code Best Practices",
     date: "January 20, 2026",
     excerpt:

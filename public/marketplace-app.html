@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Building an Android App for a Marketplace</title>
+  <meta name="description" content="A deep dive into creating an agricultural marketplace app using Flutter and Firebase." />
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("clawpilotTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.65;
+    }
+
+    a { color: var(--cp-link); }
+
+    .page {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 20px 64px;
+    }
+
+    .hero {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 40px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 6px;
+      background: var(--cp-accent);
+    }
+
+    .eyebrow {
+      color: var(--cp-accent);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      margin-bottom: 12px;
+    }
+
+    h1, h2, h3 {
+      line-height: 1.2;
+      margin: 0 0 16px;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 4rem);
+      letter-spacing: -0.04em;
+      max-width: 900px;
+    }
+
+    h2 {
+      font-size: clamp(1.45rem, 3vw, 2rem);
+      margin-top: 40px;
+      padding-top: 12px;
+      border-top: 1px solid var(--cp-border);
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      margin-top: 24px;
+      color: var(--cp-text);
+    }
+
+    p { margin: 0 0 18px; }
+
+    .dek {
+      color: var(--cp-text-muted);
+      font-size: 1.15rem;
+      max-width: 860px;
+      margin-bottom: 0;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--cp-border);
+      border-radius: 999px;
+      padding: 6px 12px;
+      color: var(--cp-text-muted);
+      background: var(--cp-surface-soft);
+      font-size: 0.9rem;
+    }
+
+    .notice {
+      border: 1px solid var(--cp-border);
+      border-left: 6px solid var(--cp-warning);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      padding: 16px 18px;
+      margin: 0 0 24px;
+      color: var(--cp-text-muted);
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    article {
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 36px;
+    }
+
+    aside {
+      position: sticky;
+      top: 20px;
+      background: var(--cp-surface);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14);
+      padding: 20px;
+    }
+
+    aside h2 {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+      font-size: 1rem;
+    }
+
+    .toc {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .toc li { margin: 0 0 8px; }
+
+    .toc a {
+      text-decoration: none;
+      color: var(--cp-text-muted);
+      font-size: 0.92rem;
+    }
+
+    .toc a:hover { color: var(--cp-accent); }
+
+    ul, ol {
+      margin: 0 0 20px 22px;
+      padding: 0;
+    }
+
+    li { margin-bottom: 8px; }
+
+    .callout {
+      background: var(--cp-accent-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+
+    .callout strong { color: var(--cp-accent); }
+
+    .comparison {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      margin: 24px 0;
+    }
+
+    .card {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface-soft);
+      padding: 18px;
+    }
+
+    .card h3 { margin-top: 0; }
+
+    .flow-box {
+      margin: 20px 0 8px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--cp-border);
+      background:
+        linear-gradient(135deg, rgba(177, 31, 75, 0.08), rgba(0, 120, 212, 0.08)),
+        var(--cp-surface);
+    }
+
+    .flow-title {
+      margin: 0 0 10px;
+      font-size: 0.92rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--cp-text-muted);
+      font-weight: 700;
+    }
+
+    .flow-diagram {
+      margin: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .flow-step {
+      border: 1px solid transparent;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 0.96rem;
+      line-height: 1.35;
+      color: var(--cp-text);
+      max-width: 240px;
+      font-weight: 600;
+    }
+
+    .step-source { background: #ffe8ef; border-color: #f6b5c8; }
+    .step-batch { background: #e9f7e8; border-color: #9ad39a; }
+    .step-flush { background: #e5f3ff; border-color: #9dc9f5; }
+    .step-checkpoint { background: #efe8ff; border-color: #c4b0f8; }
+
+    .flow-parallel {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      padding: 10px;
+      border: 1px dashed var(--cp-border-strong);
+      border-radius: 12px;
+      background: #fff1dc;
+      min-width: 260px;
+    }
+
+    .channel-box {
+      border: 1px solid #f5c87b;
+      border-radius: 10px;
+      background: #fff7ea;
+      color: var(--cp-text);
+      font-size: 0.84rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 8px 6px;
+    }
+
+    .flow-arrow {
+      color: var(--cp-accent);
+      font-weight: 700;
+      font-size: 1.05rem;
+      line-height: 1;
+    }
+
+    html[data-theme="dark"] .flow-box {
+      background:
+        linear-gradient(135deg, rgba(253, 142, 161, 0.2), rgba(77, 166, 255, 0.2)),
+        var(--cp-surface);
+    }
+
+    html[data-theme="dark"] .step-source { background: #4e2f39; border-color: #8f5968; }
+    html[data-theme="dark"] .step-batch { background: #284430; border-color: #4e8b5b; }
+    html[data-theme="dark"] .step-flush { background: #243c52; border-color: #4b7ea8; }
+    html[data-theme="dark"] .step-checkpoint { background: #3d2d57; border-color: #6f57a0; }
+    html[data-theme="dark"] .flow-parallel { background: #4a3825; border-color: #8e6a3c; }
+    html[data-theme="dark"] .channel-box { background: #5a452d; border-color: #a17a46; }
+
+    .metric-strip {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin: 24px 0;
+    }
+
+    .metric {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface-soft);
+      padding: 16px;
+    }
+
+    .metric .label {
+      display: block;
+      color: var(--cp-text-muted);
+      font-size: 0.84rem;
+      margin-bottom: 4px;
+    }
+
+    .metric .value {
+      display: block;
+      color: var(--cp-accent);
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", Courier, monospace;
+      background: var(--cp-surface-soft);
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 2px 6px;
+      color: var(--cp-text);
+    }
+
+    footer {
+      color: var(--cp-text-muted);
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 28px 0 0;
+    }
+
+    @media (max-width: 900px) {
+      .content { grid-template-columns: 1fr; }
+      aside { position: static; }
+      .comparison, .metric-strip { grid-template-columns: 1fr; }
+      .hero, article { padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <a href="/" style="display: inline-flex; align-items: center; text-decoration: none; color: var(--cp-text-muted); font-weight: 600; margin-bottom: 24px; font-size: 0.95rem;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Home
+    </a>
+    <section class="hero">
+      <div class="eyebrow">Mobile Development</div>
+      <h1>Building MetaAgro: An Agricultural Marketplace App</h1>
+      <p class="dek">How I built a mobile app for farmers in India using Flutter and Firebase to connect buyers and sellers seamlessly.</p>
+      <div class="meta">
+        <span class="pill">Flutter</span>
+        <span class="pill">Firebase</span>
+        <span class="pill">Android</span>
+        <span class="pill">iOS</span>
+      </div>
+    </section>
+
+    <div class="content">
+      <article>
+        <div style="margin-bottom: 24px;">
+          <a href="https://play.google.com/store/apps/details?id=com.gavs.ifarmapp&amp;utm_source=na_Med" target="_blank" rel="noopener noreferrer">
+            <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" width="180">
+          </a>
+          <p style="margin-top: 8px; font-weight: 500;">
+            <a href="https://play.google.com/store/apps/details?id=com.gavs.ifarmapp&amp;utm_source=na_Med" target="_blank" rel="noopener noreferrer">MetaAgro - Apps on Google Play</a>
+          </p>
+        </div>
+        <p>Building a marketplace app requires balancing user experience with robust backend architecture. For MetaAgro, an agricultural marketplace targeting farmers in India, the goal was to create a platform that allowed farmers to easily list their products and manage orders alongside a dedicated access mode for company employees.</p>
+        <p>I chose <strong>Flutter</strong> for the mobile frontend to ensure a consistent experience across Android and iOS platforms from a single codebase. For the backend, <strong>Firebase</strong> was the natural choice, providing authentication, data storage, and file hosting out of the box.</p>
+        <h2 id="requirements">Gathering Requirements</h2>
+        <p>The core requirements for the app included:</p>
+        <ul>
+          <li><strong>Phone number authentication</strong> to simplify onboarding for farmers.</li>
+          <li>A comprehensive <strong>first-time setup flow</strong> to capture profile details, farm locations, and product offerings.</li>
+          <li>A dashboard featuring <strong>My Farm</strong>, <strong>Orders</strong>, and the <strong>Marketplace</strong>.</li>
+          <li>Offline capabilities and local preferences for low-connectivity environments.</li>
+          <li>An <strong>Employee Hub</strong> for staff to access current device locations and upload geo-tagged images directly to Firebase Storage.</li>
+        </ul>
+        <h2 id="architecture">Architecture &amp; Tech Stack</h2>
+        <p>The app is built entirely with Flutter. It utilizes <code>firebase_auth</code> for secure phone-based authentication, <code>cloud_firestore</code> for scalable NoSQL data storage, and <code>firebase_storage</code> for managing images and multimedia assets.</p>
+        <p>Localization is managed directly through Flutter's <code>gen-l10n</code> tools, crucial for an app serving a diverse regional demographic. Adding support for local languages ensures the app feels native and accessible to every farmer.</p>
+        <h2 id="employee-hub">Employee Mode and Firebase Integration</h2>
+        <p>One interesting challenge was handling two distinct user personas within the same app: Farmers (Buyers/Sellers) and Employees. During the sign-in phase, the app offers an <em>Employee mode</em>.</p>
+        <p>When an employee signs in, they are directed to an exclusive Employee Hub. This hub integrates platform-specific location permissions (like <code>ACCESS_FINE_LOCATION</code> for Android and <code>NSLocationWhenInUseUsageDescription</code> for iOS) to capture precise farm locations and tag uploaded images accurately.</p>
+        <div class="callout">
+          <strong>Security considerations:</strong> While a demo employee account was used during initial iterations, transitioning to production required strict Firebase Firestore rules and Storage constraints to ensure that only authorized employees could upload or modify critical field data.
+        </div>
+        <h2 id="pricing">Iterating on the Product Schema</h2>
+        <p>As the business evolved, the product schema had to adapt. Initially, generic structures sufficed, but eventually, specific product requirements—like pricing mangoes per 3.5 kg packs—had to be mirrored directly from the organization's existing web platforms into the app's Firestore schema.</p>
+        <h2 id="quality">Testing and Quality Assurance</h2>
+        <p>Maintaining quality in a fast-paced environment meant relying on Flutter's built-in testing tools. Running <code>flutter analyze</code> and <code>flutter test</code> frequently helped catch UI regression and state management bugs early. By keeping the codebase clean, upgrading Flutter SDK versions (like a major migration in June 2026) became a much smoother process.</p>
+        <h2 id="lessons">Lessons Learned</h2>
+        <ul>
+          <li><strong>Platform Permissions:</strong> Handling location and gallery permissions requires careful attention to platform-specific guidelines.</li>
+          <li><strong>Schema Flexibility:</strong> Design your Firestore schemas to be flexible early on. Business rules, like pricing models, change frequently.</li>
+          <li><strong>Localization First:</strong> Implementing <code>l10n</code> from the beginning is vastly easier than retrofitting it into an app later.</li>
+        </ul>
+        <p style="margin-top: 32px; font-weight: 600;">
+          <a href="https://swatantra.bio/contact">Swatantra Yadav - Software Engineer Portfolio</a>
+        </p>
+      </article>
+
+      <aside aria-label="Table of contents">
+        <h2>In this article</h2>
+        <ul class="toc">
+          <li><a href="#requirements">Gathering Requirements</a></li>
+          <li><a href="#architecture">Architecture &amp; Tech Stack</a></li>
+          <li><a href="#employee-hub">Employee Mode</a></li>
+          <li><a href="#pricing">Product Schema</a></li>
+          <li><a href="#quality">Testing &amp; QA</a></li>
+          <li><a href="#lessons">Lessons Learned</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+</body>
+</html>
