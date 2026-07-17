@@ -4,6 +4,7 @@ const projects = [
     description:
       "Designed and built a service at Microsoft that saves $5M annually, impacting both infrastructure efficiency and operational cost.",
     technologies: ["Azure", "C#", "Microservices"],
+    link: "/telemetry-uploader.html",
   },
   {
     title: "Global Infrastructure Deployment",
@@ -55,7 +56,15 @@ export default function ProjectsPage() {
             key={index}
             className="p-6 border border-foreground/10 rounded-lg hover:border-foreground/30 transition-colors"
           >
-            <h2 className="text-xl font-semibold">{project.title}</h2>
+            <h2 className="text-xl font-semibold">
+              {project.link ? (
+                <a href={project.link} className="hover:underline">
+                  {project.title}
+                </a>
+              ) : (
+                project.title
+              )}
+            </h2>
             <p className="mt-2 text-foreground/70">{project.description}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {project.technologies.map((tech) => (
