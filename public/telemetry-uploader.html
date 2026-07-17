@@ -145,6 +145,49 @@
       max-width: 860px;
       margin-bottom: 0;
     }
+    
+    .action-bar {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid var(--cp-border);
+    }
+    
+    .action-btn {
+      background: none;
+      border: none;
+      color: var(--cp-text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+    }
+    
+    .action-btn:hover {
+      color: var(--cp-text);
+      background-color: var(--cp-surface-soft);
+    }
+    
+    .action-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .action-btn.liked svg {
+      fill: currentColor;
+    }
 
     .meta {
       display: flex;
@@ -402,6 +445,24 @@
       <div class="eyebrow">Engineering blog</div>
       <h1>Telemetry Uploader: Scaling a Telemetry Pipeline Through Latency, Backlog, and Checkpointing Pressure</h1>
       <p class="dek">A publish-safe version of the engineering story behind scaling a telemetry ingestion service from a correctness-first pipeline into a higher-throughput, more resilient distributed system.</p>
+      <div class="action-bar">
+        <button class="action-btn like-btn" aria-label="Like">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+          <span class="like-count">0</span>
+        </button>
+        <button class="action-btn share-btn" aria-label="Share">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <circle cx="18" cy="5" r="3"/>
+            <circle cx="6" cy="12" r="3"/>
+            <circle cx="18" cy="19" r="3"/>
+            <line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/>
+            <line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>
+          </svg>
+          Share
+        </button>
+      </div>
       <div class="meta">
         <span class="pill">Telemetry ingestion</span>
         <span class="pill">Event Hubs</span>
@@ -595,5 +656,76 @@
     </div>
 
   </main>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const likeBtn = document.querySelector('.like-btn');
+      const shareBtn = document.querySelector('.share-btn');
+      const likeCount = document.querySelector('.like-count');
+      const title = "Building Scalable Microservices"; // Post title to match
+      
+      let likes = 0;
+      
+      // Fetch initial likes from the API
+      fetch(`/api/likes?title=${encodeURIComponent(title)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.likes !== undefined) {
+            likes = data.likes;
+            likeCount.textContent = likes;
+            if (likes > 0) {
+              likeBtn.classList.add('liked');
+              likeBtn.querySelector('svg').style.fill = 'currentColor';
+            }
+          }
+        })
+        .catch(err => console.error("Error fetching likes:", err));
+      
+      likeBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        
+        try {
+          const res = await fetch('/api/likes', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title })
+          });
+          const data = await res.json();
+          
+          if (data.likes !== undefined) {
+            likes = data.likes;
+            likeCount.textContent = likes;
+            likeBtn.classList.add('liked');
+            likeBtn.querySelector('svg').style.fill = 'currentColor';
+          }
+        } catch (err) {
+          console.error("Error updating likes:", err);
+          // Fallback UI update
+          likes++;
+          likeCount.textContent = likes;
+          likeBtn.classList.add('liked');
+          likeBtn.querySelector('svg').style.fill = 'currentColor';
+        }
+      });
+      
+      shareBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const url = window.location.href;
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: document.title,
+              url: url
+            });
+          } else {
+            await navigator.clipboard.writeText(url);
+            alert("Link copied to clipboard!");
+          }
+        } catch (err) {
+          console.error("Error sharing:", err);
+        }
+      });
+    });
+  </script>
 </body>
 </html>

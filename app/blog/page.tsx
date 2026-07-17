@@ -1,3 +1,5 @@
+import { BlogActionButtons } from "../components/BlogActionButtons";
+
 const posts = [
   {
     title: "Building Scalable Microservices",
@@ -65,6 +67,10 @@ export default function BlogPage() {
                   {tag}
                 </span>
               ))}
+            </div>
+            
+            <div className="mt-4 pt-4 border-t border-foreground/10">
+              <BlogActionButtons title={post.title} href={post.href} />
             </div>
           </article>
         ))}

@@ -1,6 +1,11 @@
+import Link from "next/link";
+
 export default function ContactPage() {
   return (
     <main className="max-w-4xl mx-auto p-10">
+      <Link href="/" className="inline-flex items-center text-sm font-medium text-foreground/60 hover:text-foreground mb-8">
+        &larr; Back to Home
+      </Link>
       <h1 className="text-4xl font-bold">Contact</h1>
       <p className="mt-2 text-foreground/60">Let&apos;s connect!</p>
 
