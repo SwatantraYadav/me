@@ -1,5 +1,12 @@
 const projects = [
   {
+    title: "Redmond Rentals",
+    description:
+      "Built a community tool-sharing marketplace that helps neighbors rent useful equipment, save money, and reduce waste.",
+    technologies: ["Next.js", "TypeScript", "Stripe", "Azure"],
+    link: "https://redmond-rentals.org",
+  },
+  {
     title: "Cost-Saving Microservice",
     description:
       "Designed and built a service at Microsoft that saves $5M annually, impacting both infrastructure efficiency and operational cost.",
@@ -58,7 +65,12 @@ export default function ProjectsPage() {
           >
             <h2 className="text-xl font-semibold">
               {project.link ? (
-                <a href={project.link} className="hover:underline">
+                <a
+                  href={project.link}
+                  className="hover:underline"
+                  target={project.link.startsWith("http") ? "_blank" : undefined}
+                  rel={project.link.startsWith("http") ? "noreferrer" : undefined}
+                >
                   {project.title}
                 </a>
               ) : (
