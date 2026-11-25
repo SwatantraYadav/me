@@ -7,6 +7,13 @@ const projects = [
     link: "https://redmond-rentals.org",
   },
   {
+    title: "College Explorer",
+    description:
+      "Built a college research app with Google sign-in, college data, maps, favorites, and community discussions.",
+    technologies: ["Flutter", "Firebase", "Google Maps", "College Scorecard API"],
+    link: "/college-explorer/privacy-policy",
+  },
+  {
     title: "Cost-Saving Microservice",
     description:
       "Designed and built a service at Microsoft that saves $5M annually, impacting both infrastructure efficiency and operational cost.",
